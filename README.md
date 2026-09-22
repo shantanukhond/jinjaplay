@@ -12,7 +12,7 @@ Built by [Shantanu Khond](https://shantanukhond.me).
 
 - Three panes: JSON context, Jinja template, live rendered output
 - Actual CPython + the `jinja2` package, via [Pyodide](https://pyodide.org/) (WebAssembly)
-- Built-in examples (variables, loops, pipeline config, conditionals)
+- Built-in examples and six Learn lessons (same page, same editors)
 - Copy output / reset to default
 - 100% client-side
 
@@ -26,7 +26,7 @@ This is a static site. From the project root:
 python3 -m http.server 8765
 ```
 
-Open [http://127.0.0.1:8765](http://127.0.0.1:8765).
+Open [http://127.0.0.1:8765](http://127.0.0.1:8765). Use the **Examples** / **Learn** toggle in the header.
 
 ## Deploy (GitHub Pages)
 
@@ -50,9 +50,10 @@ Then enable **Enforce HTTPS** in the Pages settings once the certificate is read
 ## Project layout
 
 ```
-index.html      UI
-app.js          Editors, examples, Jinja2 render via Pyodide
-styles.css      Editor / tab styling
+index.html      Playground + Learn UI
+app.js          Editors, examples, lessons, Jinja2 render via Pyodide
+lessons.js      Lesson catalog
+styles.css      Editor / tab / lesson styling
 assets/         Official Jinja logo, favicon, share icons
 CNAME           Custom domain
 .github/workflows/deploy-pages.yml

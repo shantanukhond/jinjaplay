@@ -70,6 +70,42 @@
   box-shadow: 0 0 12px rgba(34, 211, 238, 0.15);
 }
 
+#example-tabs,
+#lesson-tabs {
+  display: flex;
+}
+
+#example-tabs[hidden],
+#lesson-tabs[hidden] {
+  display: none !important;
+}
+
+.mode-btn {
+  color: rgb(148 163 184);
+  cursor: pointer;
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.18), rgba(37, 99, 235, 0.18));
+  color: rgb(103 232 249);
+}
+
+#lesson-banner-points li {
+  padding-left: 0.75rem;
+  position: relative;
+}
+
+#lesson-banner-points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.4rem;
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: rgb(34 211 238);
+}
+
 /* Quick fade-in for status pill / error banners */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(-2px); }

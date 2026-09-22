@@ -12,7 +12,14 @@
   const copyBtn = document.getElementById('copy-btn');
   const resetBtn = document.getElementById('reset-btn');
   const exampleTabsEl = document.getElementById('example-tabs');
+  const lessonTabsEl = document.getElementById('lesson-tabs');
+  const catalogToggleEl = document.getElementById('catalog-toggle');
   const pyodideStatus = document.getElementById('pyodide-status');
+  const lessonBanner = document.getElementById('lesson-banner');
+  const lessonBannerTitle = document.getElementById('lesson-banner-title');
+  const lessonBannerSummary = document.getElementById('lesson-banner-summary');
+  const lessonBannerPoints = document.getElementById('lesson-banner-points');
+  const lessonBannerExtra = document.getElementById('lesson-banner-extra');
 
   // ---------------------------------------------------------------------
   // Syntax-highlighted editors (CodeMirror)
@@ -65,14 +72,21 @@
     const pyodide = await getPyodide();
     pyodide.globals.set('__template_str', templateStr);
     pyodide.globals.set('__context_json', JSON.stringify(context));
+    pyodide.globals.set('__extra_templates_json', JSON.stringify(currentExtraTemplates || {}));
     return pyodide.runPythonAsync(`
 def __render_jinja2():
     import json
-    from jinja2 import Environment, TemplateError
+    from jinja2 import DictLoader, Environment, TemplateError
 
     try:
-        env = Environment(trim_blocks=True, lstrip_blocks=True)
-        template = env.from_string(__template_str)
+        templates = json.loads(__extra_templates_json)
+        templates['main.j2'] = __template_str
+        env = Environment(
+            loader=DictLoader(templates),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+        template = env.get_template('main.j2')
         context = json.loads(__context_json)
         return template.render(**context)
     except TemplateError as e:
@@ -169,6 +183,61 @@ Standard order.
 
   const DEFAULT_EXAMPLE = 'Basic Variables';
   let activeExample = DEFAULT_EXAMPLE;
+  let currentExtraTemplates = {};
+  let catalogMode = 'examples';
+
+  const LESSON_TAB_LABELS = {
+    basics: 'Basics',
+    conditionals: 'Conditionals',
+    loops: 'Loops',
+    filters: 'Filters',
+    tests: 'Tests',
+    macros: 'Macros'
+  };
+
+  function setLessonQuery(id) {
+    const url = new URL(window.location.href);
+    if (id) url.searchParams.set('lesson', id);
+    else url.searchParams.delete('lesson');
+    history.replaceState({}, '', url);
+  }
+
+  function setCatalogMode(mode) {
+    catalogMode = mode;
+    [...catalogToggleEl.querySelectorAll('.mode-btn')].forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.mode === mode);
+    });
+    exampleTabsEl.hidden = mode !== 'examples';
+    lessonTabsEl.hidden = mode !== 'learn';
+    requestAnimationFrame(() => {
+      jsonEditor.refresh();
+      templateEditor.refresh();
+    });
+  }
+
+  function hideLessonBanner() {
+    if (!lessonBanner) return;
+    lessonBanner.classList.add('hidden');
+  }
+
+  function showLessonBanner(lesson) {
+    if (!lessonBanner) return;
+    lessonBannerTitle.textContent = `Lesson ${lesson.number} · ${lesson.title}`;
+    lessonBannerSummary.textContent = lesson.summary;
+    lessonBannerPoints.innerHTML = (lesson.points || []).map((point) => {
+      const li = document.createElement('li');
+      li.textContent = point;
+      return li.outerHTML;
+    }).join('');
+    const extraNames = Object.keys(lesson.extraTemplates || {});
+    if (extraNames.length) {
+      lessonBannerExtra.textContent = `Also loaded: ${extraNames.join(', ')} (imported by the template)`;
+      lessonBannerExtra.classList.remove('hidden');
+    } else {
+      lessonBannerExtra.classList.add('hidden');
+    }
+    lessonBanner.classList.remove('hidden');
+  }
 
   // ---------------------------------------------------------------------
   // Rendering pipeline
@@ -251,13 +320,59 @@ Standard order.
     const ex = EXAMPLES[name];
     if (!ex) return;
     activeExample = name;
+    currentExtraTemplates = {};
+    hideLessonBanner();
+    setLessonQuery(null);
+    setCatalogMode('examples');
     jsonEditor.setValue(JSON.stringify(ex.json, null, 2));
     templateEditor.setValue(ex.template);
     [...exampleTabsEl.children].forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.name === name);
     });
+    [...lessonTabsEl.children].forEach((btn) => btn.classList.remove('active'));
     render();
   }
+
+  function loadLesson(id) {
+    const lesson = (window.JINJA_LESSONS || []).find((item) => item.id === id);
+    if (!lesson) return false;
+    activeExample = null;
+    currentExtraTemplates = lesson.extraTemplates || {};
+    jsonEditor.setValue(JSON.stringify(lesson.json, null, 2));
+    templateEditor.setValue(lesson.template);
+    [...exampleTabsEl.children].forEach((btn) => btn.classList.remove('active'));
+    [...lessonTabsEl.children].forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.id === lesson.id);
+    });
+    showLessonBanner(lesson);
+    setCatalogMode('learn');
+    setLessonQuery(lesson.id);
+    render();
+    return true;
+  }
+
+  function buildLessonTabs() {
+    (window.JINJA_LESSONS || []).forEach((lesson) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'example-tab';
+      btn.dataset.id = lesson.id;
+      btn.textContent = `${lesson.number}. ${LESSON_TAB_LABELS[lesson.id] || lesson.title}`;
+      btn.addEventListener('click', () => loadLesson(lesson.id));
+      lessonTabsEl.appendChild(btn);
+    });
+  }
+
+  catalogToggleEl.addEventListener('click', (event) => {
+    const btn = event.target.closest('.mode-btn');
+    if (!btn || btn.dataset.mode === catalogMode) return;
+    if (btn.dataset.mode === 'learn') {
+      const first = (window.JINJA_LESSONS || [])[0];
+      if (first) loadLesson(first.id);
+    } else {
+      loadExample(activeExample || DEFAULT_EXAMPLE);
+    }
+  });
 
   function buildExampleTabs() {
     Object.keys(EXAMPLES).forEach((name) => {
@@ -303,8 +418,12 @@ Standard order.
   templateEditor.on('change', debouncedRender);
 
   buildExampleTabs();
+  buildLessonTabs();
   getPyodide(); // start downloading CPython + Jinja2 immediately
-  loadExample(activeExample);
+  const requestedLesson = new URLSearchParams(window.location.search).get('lesson');
+  if (!requestedLesson || !loadLesson(requestedLesson)) {
+    loadExample(activeExample);
+  }
 
   // CodeMirror mismeasures panes hidden at init time (e.g. behind layout reflow).
   requestAnimationFrame(() => {
