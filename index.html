@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JinjaPlay</title>
+<meta name="description" content="A fully client-side Jinja2 playground. Real Python Jinja2 in your browser, for developers and data engineers. By Shantanu Khond." />
+<meta name="author" content="Shantanu Khond" />
+<link rel="canonical" href="https://jinjaplay.shantanukhond.me/" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://jinjaplay.shantanukhond.me/" />
+<meta property="og:title" content="JinjaPlay" />
+<meta property="og:description" content="Interactive Jinja2 playground. Real Python Jinja2 in your browser. By Shantanu Khond." />
+<meta property="og:site_name" content="JinjaPlay" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:image" content="https://jinjaplay.shantanukhond.me/assets/icon-512.png" />
+<meta property="og:image:alt" content="JinjaPlay" />
+<meta name="theme-color" content="#020617" />
+<link rel="icon" href="favicon.ico" sizes="32x32" />
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+<!-- Tailwind CSS via CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          accent: {
+            DEFAULT: '#22d3ee',
+            glow: '#67e8f9'
+          }
+        },
+        fontFamily: {
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace']
+        },
+        boxShadow: {
+          glow: '0 0 20px rgba(34, 211, 238, 0.35)'
+        }
+      }
+    }
+  }
+</script>
+
+<!-- CodeMirror: syntax-highlighted editors for the JSON context and Jinja template panes -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/jinja2/jinja2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+
+<!-- Pyodide: runs real CPython + the actual Jinja2 package in-browser via WebAssembly (loaded lazily on demand) -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-200 font-sans antialiased">
+
+  <!-- Header / Navbar -->
+  <header class="sticky top-0 z-20 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur supports-[backdrop-filter]:bg-slate-950/70">
+    <div class="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <div class="flex items-center gap-3">
+        <img src="assets/jinja-logo.svg" width="36" height="36" alt="Jinja" class="h-9 w-9 shrink-0" />
+        <div>
+          <h1 class="text-base font-semibold tracking-tight text-slate-50 sm:text-lg">JinjaPlay</h1>
+          <p class="text-xs text-slate-500">
+            Interactive Jinja2 Playground
+            <span class="text-slate-700">·</span>
+            by <a class="text-slate-400 transition hover:text-cyan-300" href="https://shantanukhond.me" target="_blank" rel="noopener noreferrer">Shantanu Khond</a>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span id="status-pill" class="hidden items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 sm:flex">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+          Rendered
+        </span>
+        <button id="copy-btn" type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-500/50 hover:bg-slate-800 hover:text-cyan-300 active:scale-[0.97]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span class="hidden sm:inline">Copy Output</span>
+        </button>
+        <button id="reset-btn" type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-rose-500/50 hover:bg-slate-800 hover:text-rose-300 active:scale-[0.97]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          <span class="hidden sm:inline">Reset to Default</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Example tabs -->
+    <div class="mx-auto flex max-w-[1600px] items-center gap-2 overflow-x-auto px-4 pb-3 sm:px-6">
+      <span class="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500">Examples:</span>
+      <div id="example-tabs" class="flex shrink-0 gap-2"></div>
+    </div>
+  </header>
+
+  <!-- Main Split-Pane Interface -->
+  <main class="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-4">
+
+      <!-- Pane 1: Context Data (JSON) -->
+      <section class="flex min-h-[380px] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg lg:min-h-[560px]">
+        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+            <h2 class="text-sm font-semibold text-slate-200">Context Data <span class="text-slate-500">(JSON)</span></h2>
+          </div>
+          <span id="json-status" class="text-xs font-medium text-emerald-400">Valid JSON</span>
+        </div>
+        <textarea id="json-input" spellcheck="false"
+          class="editor-textarea flex-1 resize-none bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-200 outline-none placeholder:text-slate-600"
+          placeholder="Enter JSON context data..."></textarea>
+        <!-- CodeMirror mounts here, replacing the textarea above -->
+        <div id="json-error" class="hidden border-t border-rose-500/30 bg-rose-500/10 px-4 py-2 font-mono text-xs text-rose-300"></div>
+      </section>
+
+      <!-- Pane 2: Jinja Template Input -->
+      <section class="flex min-h-[380px] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg lg:min-h-[560px]">
+        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-cyan-400"></span>
+            <h2 class="text-sm font-semibold text-slate-200">Jinja Template</h2>
+          </div>
+          <span class="text-xs text-slate-500">{{ }} / {% %}</span>
+        </div>
+        <textarea id="template-input" spellcheck="false"
+          class="editor-textarea flex-1 resize-none bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-200 outline-none placeholder:text-slate-600"
+          placeholder="Write your Jinja2 template..."></textarea>
+        <!-- CodeMirror mounts here, replacing the textarea above -->
+      </section>
+
+      <!-- Pane 3: Live Rendered Output -->
+      <section class="flex min-h-[380px] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg lg:min-h-[560px]">
+        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+            <h2 class="text-sm font-semibold text-slate-200">Live Rendered Output</h2>
+          </div>
+          <span id="engine-label" class="text-xs text-slate-500">engine: jinja2 (python)</span>
+        </div>
+        <div id="pyodide-status" class="hidden items-center gap-2 border-b border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-300">
+          <svg class="h-3.5 w-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+          <span>Loading real Python + Jinja2 runtime (~10&nbsp;MB, first time only)…</span>
+        </div>
+        <pre id="output" class="editor-textarea flex-1 overflow-auto whitespace-pre-wrap break-words bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-100"></pre>
+        <div id="render-error" class="hidden border-t border-rose-500/30 bg-rose-500/10 px-4 py-3 font-mono text-xs text-rose-300"></div>
+      </section>
+
+    </div>
+
+    <footer class="mt-6 flex flex-col items-center justify-between gap-2 text-xs text-slate-600 sm:flex-row">
+      <p>
+        Built by <a class="text-slate-400 transition hover:text-cyan-300" href="https://shantanukhond.me" target="_blank" rel="noopener noreferrer">Shantanu Khond</a>
+        · 100% client-side · no data leaves your browser.
+      </p>
+      <p>
+        Powered by <a class="text-cyan-400 hover:underline" href="https://jinja.palletsprojects.com/" target="_blank" rel="noopener noreferrer">Jinja2</a>
+        · 100% real Python, in your browser.
+      </p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

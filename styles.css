@@ -1,0 +1,85 @@
+/* Custom scrollbars for the dark editor panes */
+.editor-textarea {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+  tab-size: 2;
+}
+
+/* CodeMirror panes (JSON context + Jinja template) */
+.cm-pane.CodeMirror {
+  height: 100%;
+  background: transparent;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.cm-pane .CodeMirror-gutters {
+  background: transparent;
+  border-right: 1px solid rgb(51 65 85 / 0.6);
+}
+
+.cm-pane .CodeMirror-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.editor-textarea::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.editor-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-textarea::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.editor-textarea::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
+}
+
+/* Example tab buttons */
+.example-tab {
+  white-space: nowrap;
+  border: 1px solid rgb(51 65 85 / 0.8);
+  background-color: rgb(15 23 42 / 0.6);
+  color: rgb(148 163 184);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.example-tab:hover {
+  border-color: rgb(34 211 238 / 0.5);
+  color: rgb(103 232 249);
+}
+
+.example-tab.active {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.15), rgba(37, 99, 235, 0.15));
+  border-color: rgb(34 211 238 / 0.6);
+  color: rgb(103 232 249);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.15);
+}
+
+/* Quick fade-in for status pill / error banners */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#status-pill, #json-error, #render-error {
+  animation: fade-in 0.15s ease-out;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.35);
+}
