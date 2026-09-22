@@ -12,13 +12,19 @@
   const copyBtn = document.getElementById('copy-btn');
   const resetBtn = document.getElementById('reset-btn');
   const exampleTabsEl = document.getElementById('example-tabs');
-  const lessonTabsEl = document.getElementById('lesson-tabs');
+  const exampleTabsRow = document.getElementById('example-tabs-row');
+  const lessonNavEl = document.getElementById('lesson-nav');
+  const learnSidenav = document.getElementById('learn-sidenav');
   const catalogToggleEl = document.getElementById('catalog-toggle');
   const pyodideStatus = document.getElementById('pyodide-status');
   const lessonBanner = document.getElementById('lesson-banner');
   const lessonBannerTitle = document.getElementById('lesson-banner-title');
   const lessonBannerSummary = document.getElementById('lesson-banner-summary');
-  const lessonBannerPoints = document.getElementById('lesson-banner-points');
+  const lessonSubsectionsEl = document.getElementById('lesson-subsections');
+  const lessonCatalogEl = document.getElementById('lesson-catalog');
+  const lessonCatalogLabel = document.getElementById('lesson-catalog-label');
+  const lessonCatalogHint = document.getElementById('lesson-catalog-hint');
+  const lessonCatalogItems = document.getElementById('lesson-catalog-items');
   const lessonBannerExtra = document.getElementById('lesson-banner-extra');
 
   // ---------------------------------------------------------------------
@@ -185,30 +191,29 @@ Standard order.
   let activeExample = DEFAULT_EXAMPLE;
   let currentExtraTemplates = {};
   let catalogMode = 'examples';
+  let currentLessonId = null;
+  let currentPartId = null;
+  let currentTryName = null;
 
-  const LESSON_TAB_LABELS = {
-    basics: 'Basics',
-    conditionals: 'Conditionals',
-    loops: 'Loops',
-    filters: 'Filters',
-    tests: 'Tests',
-    macros: 'Macros'
-  };
-
-  function setLessonQuery(id) {
+  function setLessonQuery(id, part, tryName) {
     const url = new URL(window.location.href);
     if (id) url.searchParams.set('lesson', id);
     else url.searchParams.delete('lesson');
+    if (id && part) url.searchParams.set('part', part);
+    else url.searchParams.delete('part');
+    if (id && tryName) url.searchParams.set('try', tryName);
+    else url.searchParams.delete('try');
     history.replaceState({}, '', url);
   }
 
   function setCatalogMode(mode) {
     catalogMode = mode;
+    document.body.classList.toggle('is-learn', mode === 'learn');
     [...catalogToggleEl.querySelectorAll('.mode-btn')].forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.mode === mode);
     });
-    exampleTabsEl.hidden = mode !== 'examples';
-    lessonTabsEl.hidden = mode !== 'learn';
+    exampleTabsRow.hidden = mode !== 'examples';
+    learnSidenav.hidden = mode !== 'learn';
     requestAnimationFrame(() => {
       jsonEditor.refresh();
       templateEditor.refresh();
@@ -220,16 +225,25 @@ Standard order.
     lessonBanner.classList.add('hidden');
   }
 
-  function showLessonBanner(lesson) {
+  function showLessonBanner(lesson, partId, tryName) {
     if (!lessonBanner) return;
-    lessonBannerTitle.textContent = `Lesson ${lesson.number} · ${lesson.title}`;
+    const part = (lesson.subsections || []).find((item) => item.id === partId);
+    const heading = part
+      ? `Lesson ${lesson.number} · ${lesson.title} · ${part.title}`
+      : `Lesson ${lesson.number} · ${lesson.title}`;
+    lessonBannerTitle.textContent = heading;
     lessonBannerSummary.textContent = lesson.summary;
-    lessonBannerPoints.innerHTML = (lesson.points || []).map((point) => {
-      const li = document.createElement('li');
-      li.textContent = point;
-      return li.outerHTML;
-    }).join('');
-    const extraNames = Object.keys(lesson.extraTemplates || {});
+    if (lessonSubsectionsEl) {
+      lessonSubsectionsEl.innerHTML = '';
+      lessonSubsectionsEl.classList.add('hidden');
+    }
+
+    renderLessonCatalog(lesson, partId, tryName);
+
+    const extraSource = part && part.extraTemplates !== undefined
+      ? part.extraTemplates
+      : (lesson.extraTemplates || {});
+    const extraNames = Object.keys(extraSource);
     if (extraNames.length) {
       lessonBannerExtra.textContent = `Also loaded: ${extraNames.join(', ')} (imported by the template)`;
       lessonBannerExtra.classList.remove('hidden');
@@ -237,6 +251,152 @@ Standard order.
       lessonBannerExtra.classList.add('hidden');
     }
     lessonBanner.classList.remove('hidden');
+  }
+
+  function highlightLessonNav(lessonId, partId) {
+    [...lessonNavEl.querySelectorAll('.learn-nav-link, .learn-nav-sublink')].forEach((btn) => {
+      const sameLesson = btn.dataset.id === lessonId;
+      const btnPart = btn.dataset.part || '';
+      btn.classList.toggle('active', sameLesson && btnPart === (partId || ''));
+    });
+    [...lessonNavEl.querySelectorAll('.learn-nav-group')].forEach((group) => {
+      group.classList.toggle('open', group.dataset.id === lessonId);
+    });
+  }
+
+  function catalogRowsFor(lesson, partId) {
+    const subs = lesson.subsections || [];
+    const filterCatalog = window.JINJA_FILTER_CATALOG || [];
+    if (!partId && lesson.id === 'filters') {
+      return filterCatalog.map((item) => ({
+        ...item,
+        part: item.group === 'string' ? 'string-filters'
+          : item.group === 'list' ? 'list-filters'
+            : 'fallback-json',
+        json: window.JINJA_FILTER_CONTEXT
+      }));
+    }
+    const selected = partId ? subs.filter((sub) => sub.id === partId) : subs;
+    const rows = [];
+    selected.forEach((sub) => {
+      if (sub.useFilterGroup) {
+        filterCatalog.filter((item) => item.group === sub.useFilterGroup).forEach((item) => {
+          rows.push({
+            ...item,
+            part: sub.id,
+            json: window.JINJA_FILTER_CONTEXT
+          });
+        });
+      }
+      (sub.catalog || []).forEach((row) => {
+        rows.push({
+          ...row,
+          part: sub.id,
+          json: row.json || sub.json || lesson.json,
+          extraTemplates: row.extraTemplates !== undefined
+            ? row.extraTemplates
+            : sub.extraTemplates
+        });
+      });
+    });
+    return rows;
+  }
+
+  function labeledPlayground(rows) {
+    const width = rows.reduce((max, row) => Math.max(max, row.name.length), 0);
+    return rows.map((row) => {
+      const example = String(row.example).replace(/\n+$/, '');
+      const lines = example.split('\n');
+      const isPrint = /^\s*\{\{/.test(lines[0]);
+      if (isPrint) {
+        const head = `${row.name.padEnd(width)} : ${lines[0]}`;
+        return lines.length > 1 ? [head, ...lines.slice(1)].join('\n') : head;
+      }
+      const safe = String(row.name).replace(/#}/g, '# }');
+      return `{# ${safe} #}\n${example}`;
+    }).join('\n');
+  }
+
+  function playgroundContext(lesson, part, rows) {
+    const usesFilterCtx = (rows || []).some((row) => row.group || row.json === window.JINJA_FILTER_CONTEXT);
+    if (usesFilterCtx || lesson.id === 'filters' || (part && part.useFilterGroup)) {
+      return Object.assign({}, window.JINJA_FILTER_CONTEXT, lesson.json, (part && part.json) || {});
+    }
+    return (part && part.json) || lesson.json;
+  }
+
+  function renderLessonCatalog(lesson, partId, tryName) {
+    const rows = catalogRowsFor(lesson, partId);
+    if (!lessonCatalogEl || !rows.length) {
+      if (lessonCatalogEl) lessonCatalogEl.classList.add('hidden');
+      return;
+    }
+    const part = (lesson.subsections || []).find((item) => item.id === partId);
+    lessonCatalogLabel.textContent = part ? part.title : `All in this section`;
+    lessonCatalogHint.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}. Try loads the example into the editors.`;
+    lessonCatalogItems.innerHTML = '';
+    rows.forEach((item) => {
+      const tr = document.createElement('tr');
+      tr.dataset.name = item.name;
+      if (tryName === item.name) tr.classList.add('active');
+
+      const nameCell = document.createElement('td');
+      const nameCode = document.createElement('code');
+      nameCode.textContent = item.name;
+      nameCell.appendChild(nameCode);
+
+      const exampleCell = document.createElement('td');
+      const exampleCode = document.createElement('code');
+      exampleCode.textContent = item.example;
+      exampleCell.appendChild(exampleCode);
+
+      const actionCell = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'lesson-try-btn';
+      btn.textContent = 'Try';
+      btn.addEventListener('click', () => loadCatalogTry(lesson.id, partId, item.name));
+      actionCell.appendChild(btn);
+
+      tr.append(nameCell, exampleCell, actionCell);
+      lessonCatalogItems.appendChild(tr);
+    });
+    lessonCatalogEl.classList.remove('hidden');
+  }
+
+  function loadCatalogTry(lessonId, partId, name) {
+    const lesson = (window.JINJA_LESSONS || []).find((entry) => entry.id === lessonId);
+    if (!lesson) return false;
+    const rows = catalogRowsFor(lesson, partId);
+    const row = rows.find((entry) => entry.name === name);
+    if (!row) return false;
+    activeExample = null;
+    currentLessonId = lesson.id;
+    currentPartId = partId || null;
+    currentTryName = row.name;
+    const sub = (lesson.subsections || []).find((entry) => entry.id === (partId || row.part));
+    currentExtraTemplates = row.extraTemplates !== undefined
+      ? row.extraTemplates
+      : (sub && sub.extraTemplates !== undefined ? sub.extraTemplates : (lesson.extraTemplates || {}));
+    jsonEditor.setValue(JSON.stringify(row.json || lesson.json, null, 2));
+    templateEditor.setValue(row.example);
+    [...exampleTabsEl.children].forEach((btn) => btn.classList.remove('active'));
+    highlightLessonNav(lesson.id, currentPartId);
+    showLessonBanner(lesson, currentPartId, currentTryName);
+    setCatalogMode('learn');
+    setLessonQuery(lesson.id, currentPartId, currentTryName);
+    render();
+    requestAnimationFrame(() => {
+      const activeRow = lessonCatalogItems.querySelector('tr.active');
+      if (activeRow) activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    return true;
+  }
+
+  function scrollLessonPart() {
+    if (lessonCatalogEl && !lessonCatalogEl.classList.contains('hidden')) {
+      lessonCatalogEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -250,6 +410,13 @@ Standard order.
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => fn(...args), delay);
     };
+  }
+
+  function refreshEditors() {
+    requestAnimationFrame(() => {
+      jsonEditor.refresh();
+      templateEditor.refresh();
+    });
   }
 
   function validateJson() {
@@ -283,6 +450,7 @@ Standard order.
       renderError.textContent = '⚠ Fix the JSON context errors above to re-render the template.';
       renderError.classList.remove('hidden');
       statusPill.classList.add('hidden');
+      refreshEditors();
       return;
     }
 
@@ -295,12 +463,14 @@ Standard order.
         output.textContent = result;
         renderError.classList.add('hidden');
         statusPill.classList.remove('hidden');
+        refreshEditors();
       })
       .catch((err) => {
         if (token !== renderToken) return;
         renderError.textContent = `⚠ Template Error: ${formatTemplateError(err)}`;
         renderError.classList.remove('hidden');
         statusPill.classList.add('hidden');
+        refreshEditors();
       });
   }
 
@@ -320,6 +490,9 @@ Standard order.
     const ex = EXAMPLES[name];
     if (!ex) return;
     activeExample = name;
+    currentLessonId = null;
+    currentPartId = null;
+    currentTryName = null;
     currentExtraTemplates = {};
     hideLessonBanner();
     setLessonQuery(null);
@@ -329,37 +502,88 @@ Standard order.
     [...exampleTabsEl.children].forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.name === name);
     });
-    [...lessonTabsEl.children].forEach((btn) => btn.classList.remove('active'));
+    highlightLessonNav(null, null);
     render();
   }
 
-  function loadLesson(id) {
+  function loadLesson(id, partId, tryName) {
     const lesson = (window.JINJA_LESSONS || []).find((item) => item.id === id);
     if (!lesson) return false;
+    if (partId && String(partId).startsWith('filter:')) {
+      const filterName = partId.slice('filter:'.length);
+      const filter = (window.JINJA_FILTER_CATALOG || []).find((item) => item.name === filterName);
+      const groupPart = filter
+        ? (lesson.subsections || []).find((sub) => sub.useFilterGroup === filter.group)
+        : null;
+      return loadCatalogTry(id, groupPart ? groupPart.id : null, filterName);
+    }
+    const part = partId
+      ? (lesson.subsections || []).find((item) => item.id === partId)
+      : null;
+    if (partId && !part) return false;
+    if (tryName) return loadCatalogTry(id, part ? part.id : null, tryName);
+
     activeExample = null;
-    currentExtraTemplates = lesson.extraTemplates || {};
-    jsonEditor.setValue(JSON.stringify(lesson.json, null, 2));
-    templateEditor.setValue(lesson.template);
+    currentLessonId = lesson.id;
+    currentPartId = part ? part.id : null;
+    currentTryName = null;
+    currentExtraTemplates = (part && part.extraTemplates !== undefined)
+      ? part.extraTemplates
+      : (lesson.extraTemplates || {});
+    const rows = catalogRowsFor(lesson, currentPartId);
+    jsonEditor.setValue(JSON.stringify(playgroundContext(lesson, part, rows), null, 2));
+    templateEditor.setValue(rows.length ? labeledPlayground(rows) : ((part && part.template) || lesson.template));
     [...exampleTabsEl.children].forEach((btn) => btn.classList.remove('active'));
-    [...lessonTabsEl.children].forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.id === lesson.id);
-    });
-    showLessonBanner(lesson);
+    highlightLessonNav(lesson.id, currentPartId);
+    showLessonBanner(lesson, currentPartId);
     setCatalogMode('learn');
-    setLessonQuery(lesson.id);
+    setLessonQuery(lesson.id, currentPartId);
     render();
+    requestAnimationFrame(() => scrollLessonPart());
     return true;
   }
 
-  function buildLessonTabs() {
+  function buildLessonNav() {
     (window.JINJA_LESSONS || []).forEach((lesson) => {
+      const group = document.createElement('div');
+      group.className = 'learn-nav-group';
+      group.dataset.id = lesson.id;
+
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'example-tab';
+      btn.className = 'learn-nav-link';
       btn.dataset.id = lesson.id;
-      btn.textContent = `${lesson.number}. ${LESSON_TAB_LABELS[lesson.id] || lesson.title}`;
+      btn.dataset.part = '';
+      const num = document.createElement('span');
+      num.className = 'learn-nav-num';
+      num.textContent = String(lesson.number).padStart(2, '0');
+      const copy = document.createElement('span');
+      copy.className = 'learn-nav-copy';
+      const title = document.createElement('span');
+      title.className = 'learn-nav-title';
+      title.textContent = lesson.title;
+      const blurb = document.createElement('span');
+      blurb.className = 'learn-nav-blurb';
+      blurb.textContent = lesson.summary;
+      copy.append(title, blurb);
+      btn.append(num, copy);
       btn.addEventListener('click', () => loadLesson(lesson.id));
-      lessonTabsEl.appendChild(btn);
+
+      const sub = document.createElement('div');
+      sub.className = 'learn-nav-subs';
+      (lesson.subsections || []).forEach((item) => {
+        const link = document.createElement('button');
+        link.type = 'button';
+        link.className = 'learn-nav-sublink';
+        link.dataset.id = lesson.id;
+        link.dataset.part = item.id;
+        link.textContent = item.title;
+        link.addEventListener('click', () => loadLesson(lesson.id, item.id));
+        sub.appendChild(link);
+      });
+
+      group.append(btn, sub);
+      lessonNavEl.appendChild(group);
     });
   }
 
@@ -407,7 +631,11 @@ Standard order.
   });
 
   resetBtn.addEventListener('click', () => {
-    loadExample(DEFAULT_EXAMPLE);
+    if (catalogMode === 'learn' && currentLessonId) {
+      loadLesson(currentLessonId, currentPartId);
+    } else {
+      loadExample(DEFAULT_EXAMPLE);
+    }
     flashButton(resetBtn, 'Reset!');
   });
 
@@ -418,10 +646,15 @@ Standard order.
   templateEditor.on('change', debouncedRender);
 
   buildExampleTabs();
-  buildLessonTabs();
+  buildLessonNav();
   getPyodide(); // start downloading CPython + Jinja2 immediately
-  const requestedLesson = new URLSearchParams(window.location.search).get('lesson');
-  if (!requestedLesson || !loadLesson(requestedLesson)) {
+  const bootParams = new URLSearchParams(window.location.search);
+  const requestedLesson = bootParams.get('lesson');
+  const requestedPart = bootParams.get('part') || undefined;
+  const requestedTry = bootParams.get('try') || undefined;
+  if (requestedLesson) {
+    if (!loadLesson(requestedLesson, requestedPart, requestedTry)) loadLesson(requestedLesson);
+  } else {
     loadExample(activeExample);
   }
 

@@ -60,7 +60,7 @@
 
 <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="min-h-screen bg-slate-950 text-slate-200 font-sans antialiased">
+<body class="flex min-h-screen flex-col bg-slate-950 text-slate-200 font-sans antialiased">
 
   <!-- Header / Navbar -->
   <header class="sticky top-0 z-20 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur supports-[backdrop-filter]:bg-slate-950/70">
@@ -92,93 +92,123 @@
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
           <span class="hidden sm:inline">Reset to Default</span>
         </button>
-      </div>
-    </div>
-
-    <!-- Examples + Learn share this page -->
-    <div class="mx-auto flex max-w-[1600px] flex-col gap-2 px-4 pb-3 sm:px-6">
-      <div class="flex items-center gap-3 overflow-x-auto">
         <div id="catalog-toggle" class="flex shrink-0 items-center rounded-lg border border-slate-800 bg-slate-900 p-0.5 text-xs font-medium">
           <button type="button" data-mode="examples" class="mode-btn active rounded-md px-2.5 py-1.5">Examples</button>
           <button type="button" data-mode="learn" class="mode-btn rounded-md px-2.5 py-1.5">Learn</button>
         </div>
-        <div id="example-tabs" class="flex shrink-0 gap-2"></div>
-        <div id="lesson-tabs" class="flex shrink-0 gap-2" hidden></div>
       </div>
-      <div id="lesson-banner" class="hidden rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5">
-        <p id="lesson-banner-title" class="text-xs font-medium text-cyan-300"></p>
-        <p id="lesson-banner-summary" class="mt-0.5 text-xs text-slate-400"></p>
-        <ul id="lesson-banner-points" class="mt-2 space-y-1 text-xs text-slate-300"></ul>
-        <p id="lesson-banner-extra" class="mt-2 hidden font-mono text-[11px] text-slate-500"></p>
-      </div>
+    </div>
+
+    <div id="example-tabs-row" class="mx-auto flex max-w-[1600px] items-center gap-2 overflow-x-auto px-4 pb-3 sm:px-6">
+      <span class="shrink-0 text-xs font-medium uppercase tracking-wide text-slate-500">Examples:</span>
+      <div id="example-tabs" class="flex shrink-0 gap-2"></div>
     </div>
   </header>
 
-  <!-- Main Split-Pane Interface -->
-  <main class="mx-auto max-w-[1600px] px-4 py-5 sm:px-6">
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-4">
+  <div id="app-shell" class="flex min-h-0 flex-1">
+    <aside id="learn-sidenav" hidden class="learn-sidenav">
+      <div class="learn-sidenav-head">
+        <p class="text-[11px] font-medium uppercase tracking-wide text-cyan-400">Learn Jinja2</p>
+        <p class="mt-1 text-xs text-slate-500">6 sections · click a part to filter the table</p>
+      </div>
+      <nav id="lesson-nav" class="learn-sidenav-nav" aria-label="Jinja2 lessons"></nav>
+    </aside>
+
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+      <!-- Main Split-Pane Interface -->
+      <main class="mx-auto w-full max-w-[1600px] flex-1 px-4 py-5 sm:px-6">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-4">
 
       <!-- Pane 1: Context Data (JSON) -->
-      <section class="flex min-h-[380px] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg lg:min-h-[560px]">
-        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
+      <section class="editor-pane flex flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg">
+        <div class="flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-amber-400"></span>
             <h2 class="text-sm font-semibold text-slate-200">Context Data <span class="text-slate-500">(JSON)</span></h2>
           </div>
           <span id="json-status" class="text-xs font-medium text-emerald-400">Valid JSON</span>
         </div>
-        <textarea id="json-input" spellcheck="false"
-          class="editor-textarea flex-1 resize-none bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-200 outline-none placeholder:text-slate-600"
-          placeholder="Enter JSON context data..."></textarea>
-        <!-- CodeMirror mounts here, replacing the textarea above -->
-        <div id="json-error" class="hidden border-t border-rose-500/30 bg-rose-500/10 px-4 py-2 font-mono text-xs text-rose-300"></div>
+        <div id="json-error" class="hidden border-b border-rose-500/30 bg-rose-500/10 px-4 py-2 font-mono text-xs text-rose-300"></div>
+        <div class="editor-body">
+          <textarea id="json-input" spellcheck="false"
+            class="editor-textarea flex-1 resize-none bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-200 outline-none placeholder:text-slate-600"
+            placeholder="Enter JSON context data..."></textarea>
+        </div>
       </section>
 
       <!-- Pane 2: Jinja Template Input -->
-      <section class="flex min-h-[380px] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg lg:min-h-[560px]">
-        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
+      <section class="editor-pane flex flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg">
+        <div class="flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-cyan-400"></span>
             <h2 class="text-sm font-semibold text-slate-200">Jinja Template</h2>
           </div>
           <span class="text-xs text-slate-500">{{ }} / {% %}</span>
         </div>
-        <textarea id="template-input" spellcheck="false"
-          class="editor-textarea flex-1 resize-none bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-200 outline-none placeholder:text-slate-600"
-          placeholder="Write your Jinja2 template..."></textarea>
-        <!-- CodeMirror mounts here, replacing the textarea above -->
+        <div class="editor-body">
+          <textarea id="template-input" spellcheck="false"
+            class="editor-textarea flex-1 resize-none bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-200 outline-none placeholder:text-slate-600"
+            placeholder="Write your Jinja2 template..."></textarea>
+        </div>
       </section>
 
       <!-- Pane 3: Live Rendered Output -->
-      <section class="flex min-h-[380px] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg lg:min-h-[560px]">
-        <div class="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
+      <section class="editor-pane flex flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60 shadow-lg">
+        <div class="flex shrink-0 items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2.5">
           <div class="flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
             <h2 class="text-sm font-semibold text-slate-200">Live Rendered Output</h2>
           </div>
           <span id="engine-label" class="text-xs text-slate-500">engine: jinja2 (python)</span>
         </div>
-        <div id="pyodide-status" class="hidden items-center gap-2 border-b border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-300">
+        <div id="render-error" class="hidden border-b border-rose-500/30 bg-rose-500/10 px-4 py-2 font-mono text-xs text-rose-300"></div>
+        <div id="pyodide-status" class="hidden shrink-0 items-center gap-2 border-b border-cyan-500/20 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-300">
           <svg class="h-3.5 w-3.5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
           <span>Loading real Python + Jinja2 runtime (~10&nbsp;MB, first time only)…</span>
         </div>
-        <pre id="output" class="editor-textarea flex-1 overflow-auto whitespace-pre-wrap break-words bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-100"></pre>
-        <div id="render-error" class="hidden border-t border-rose-500/30 bg-rose-500/10 px-4 py-3 font-mono text-xs text-rose-300"></div>
+        <div class="editor-body">
+          <pre id="output" class="editor-textarea h-full overflow-auto whitespace-pre-wrap break-words bg-slate-950/60 p-4 font-mono text-[13px] leading-relaxed text-slate-100"></pre>
+        </div>
       </section>
 
-    </div>
+        </div>
 
-    <footer class="mt-6 flex flex-col items-center justify-between gap-2 text-xs text-slate-600 sm:flex-row">
-      <p>
-        Built by <a class="text-slate-400 transition hover:text-cyan-300" href="https://shantanukhond.me" target="_blank" rel="noopener noreferrer">Shantanu Khond</a>
-        · 100% client-side · no data leaves your browser.
-      </p>
-      <p>
-        Powered by <a class="text-cyan-400 hover:underline" href="https://jinja.palletsprojects.com/" target="_blank" rel="noopener noreferrer">Jinja2</a>
-        · 100% real Python, in your browser.
-      </p>
-    </footer>
-  </main>
+        <section id="lesson-banner" class="lesson-notes mt-4 hidden">
+          <p id="lesson-banner-title" class="text-sm font-semibold text-cyan-300"></p>
+          <p id="lesson-banner-summary" class="mt-1 text-sm leading-relaxed text-slate-400"></p>
+          <div id="lesson-subsections" class="lesson-subsections hidden"></div>
+          <div id="lesson-catalog" class="lesson-catalog hidden">
+            <p id="lesson-catalog-label" class="lesson-catalog-label">Reference</p>
+            <p id="lesson-catalog-hint" class="lesson-catalog-hint"></p>
+            <div class="lesson-catalog-wrap">
+              <table class="lesson-catalog-table">
+                <thead>
+                  <tr>
+                    <th>Syntax</th>
+                    <th>Example</th>
+                    <th>Try</th>
+                  </tr>
+                </thead>
+                <tbody id="lesson-catalog-items"></tbody>
+              </table>
+            </div>
+          </div>
+          <p id="lesson-banner-extra" class="mt-3 hidden font-mono text-xs text-slate-500"></p>
+        </section>
+      </main>
+
+      <footer class="mx-auto w-full max-w-[1600px] px-4 pb-6 text-xs text-slate-600 sm:flex sm:items-center sm:justify-between sm:px-6">
+        <p>
+          Built by <a class="text-slate-400 transition hover:text-cyan-300" href="https://shantanukhond.me" target="_blank" rel="noopener noreferrer">Shantanu Khond</a>
+          · 100% client-side · no data leaves your browser.
+        </p>
+        <p class="mt-2 sm:mt-0">
+          Powered by <a class="text-cyan-400 hover:underline" href="https://jinja.palletsprojects.com/" target="_blank" rel="noopener noreferrer">Jinja2</a>
+          · 100% real Python, in your browser.
+        </p>
+      </footer>
+    </div>
+  </div>
 
   <script src="lessons.js"></script>
   <script src="app.js"></script>

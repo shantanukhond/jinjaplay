@@ -26,7 +26,7 @@ This is a static site. From the project root:
 python3 -m http.server 8765
 ```
 
-Open [http://127.0.0.1:8765](http://127.0.0.1:8765). Use the **Examples** / **Learn** toggle in the header.
+Open [http://127.0.0.1:8765](http://127.0.0.1:8765). Use the **Examples** / **Learn** toggle on the right. Learn opens a sidenav of all lessons.
 
 ## Deploy (GitHub Pages)
 
