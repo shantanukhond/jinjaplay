@@ -134,96 +134,83 @@ After comment`
         id: 'operators',
         title: 'Operators',
         catalog: [
-          { name: '+', example: '{{ 2 + 3 }}' },
+          { name: '+', example: '{{ 2 + 3 }}', sample: true },
           { name: '-', example: '{{ 10 - 4 }}' },
           { name: '*', example: '{{ 3 * 4 }}' },
           { name: '/', example: '{{ 7 / 2 }}' },
           { name: '//', example: '{{ 7 // 2 }}' },
           { name: '%', example: '{{ 7 % 2 }}' },
           { name: '**', example: '{{ 2 ** 3 }}' },
-          { name: '==', example: '{{ version == 2 }}' },
+          { name: '==', example: '{{ version == 2 }}', sample: true, gap: true },
           { name: '!=', example: '{{ version != 2 }}' },
           { name: '>', example: '{{ version > 1 }}' },
           { name: '<', example: '{{ version < 1 }}' },
           { name: '>=', example: '{{ version >= 2 }}' },
-          { name: '<=', example: '{{ version <= 1 }}' },
-          { name: 'in', example: '{{ "Ada" in user.name }}' },
-          { name: 'and', example: '{{ ready and environment == "production" }}' },
-          { name: 'or', example: '{{ ready or false }}' },
-          { name: 'not', example: '{{ not ready }}' },
-          { name: '~', example: '{{ user.name ~ " · v" ~ version }}' }
+          { name: '<=', example: '{{ version <= 1 }}', sample: true },
+          { name: 'in', example: '{{ "Ada" in user.name }}', sample: true, gap: true },
+          { name: 'and', example: '{{ ready and environment == "production" }}', sample: true, gap: true },
+          { name: 'or', example: '{{ ready or false }}', sample: true },
+          { name: 'not', example: '{{ not ready }}', sample: true },
+          { name: '~', example: '{{ user.name ~ " · v" ~ version }}', sample: true, gap: true }
         ],
-        template: `+  {{ 2 + 3 }}
--  {{ 10 - 4 }}
-*  {{ 3 * 4 }}
-/  {{ 7 / 2 }}
-// {{ 7 // 2 }}
-%  {{ 7 % 2 }}
-** {{ 2 ** 3 }}
+        template: `+   : {{ 2 + 3 }}
 
-== {{ version == 2 }}
-!= {{ version != 2 }}
->  {{ version > 1 }}
-<  {{ version < 1 }}
->= {{ version >= 2 }}
-<= {{ version <= 1 }}
-in {{ "Ada" in user.name }}
+==  : {{ version == 2 }}
+<=  : {{ version <= 1 }}
 
-and {{ ready and environment == "production" }}
-or  {{ ready or false }}
-not {{ not ready }}
-~   {{ user.name ~ " · v" ~ version }}`
+in  : {{ "Ada" in user.name }}
+
+and : {{ ready and environment == "production" }}
+or  : {{ ready or false }}
+not : {{ not ready }}
+
+~   : {{ user.name ~ " · v" ~ version }}`
       },
       {
         id: 'expressions',
         title: 'Expressions',
         catalog: [
-          { name: '| upper', example: '{{ user.name | upper }}' },
+          { name: '| upper', example: '{{ user.name | upper }}', sample: true },
           { name: '| lower', example: '{{ user.name | lower }}' },
           { name: '| title', example: '{{ user.name | title }}' },
           { name: '| capitalize', example: '{{ user.role | capitalize }}' },
           { name: '| trim', example: '{{ "  hello  " | trim }}' },
           { name: '| replace', example: '{{ user.name | replace(" ", "-") }}' },
-          { name: '| length', example: '{{ user.name | length }}' },
-          { name: '| first', example: '{{ user.name.split() | first }}' },
+          { name: '| length', example: '{{ user.name | length }}', sample: true, gap: true },
+          { name: '| wordcount', example: '{{ user.role | wordcount }}', sample: true },
+          { name: '| first', example: '{{ user.name.split() | first }}', sample: true, gap: true },
           { name: '| last', example: '{{ user.name.split() | last }}' },
-          { name: '| join', example: '{{ user.name.split() | join(" · ") }}' },
-          { name: '| default', example: '{{ missing | default("n/a") }}' },
-          { name: '| round', example: '{{ 19.999 | round(2) }}' },
-          { name: '| truncate', example: '{{ user.role | truncate(12, true, "…") }}' },
-          { name: '| wordcount', example: '{{ user.role | wordcount }}' },
+          { name: '| join', example: '{{ user.name.split() | join(" · ") }}', sample: true },
+          { name: '| default', example: '{{ missing | default("n/a") }}', sample: true, gap: true },
+          { name: '| round', example: '{{ 19.999 | round(2) }}', sample: true, gap: true },
+          { name: '| truncate', example: '{{ user.role | truncate(12, true, "…") }}', sample: true },
           { name: '( )', example: '{{ (2 + 3) * 4 }}' },
           { name: '{% set %}', example: '{% set first = user.name.split() | first %}\n{{ first }}' }
         ],
-        template: `upper      : {{ user.name | upper }}
-lower      : {{ user.name | lower }}
-title      : {{ user.name | title }}
-capitalize : {{ user.role | capitalize }}
-trim       : {{ "  hello  " | trim }}
-replace    : {{ user.name | replace(" ", "-") }}
-length     : {{ user.name | length }}
-first      : {{ user.name.split() | first }}
-last       : {{ user.name.split() | last }}
-join       : {{ user.name.split() | join(" · ") }}
-default    : {{ missing | default("n/a") }}
-round      : {{ 19.999 | round(2) }}
-truncate   : {{ user.role | truncate(12, true, "…") }}
-wordcount  : {{ user.role | wordcount }}
-group      : {{ (2 + 3) * 4 }}
-{% set first = user.name.split() | first %}
-set        : {{ first }}`
+        template: `| upper      : {{ user.name | upper }}
+
+| length     : {{ user.name | length }}
+| wordcount  : {{ user.role | wordcount }}
+
+| first      : {{ user.name.split() | first }}
+| join       : {{ user.name.split() | join(" · ") }}
+
+| default    : {{ missing | default("n/a") }}
+
+| round      : {{ 19.999 | round(2) }}
+| truncate   : {{ user.role | truncate(12, true, "…") }}`
       },
       {
         id: 'arrays',
         title: 'Arrays',
         catalog: [
-          { name: 'list[0]', example: '{{ tags[0] }}' },
+          { name: 'list[0]', example: '{{ tags[0] }}', sample: true },
           { name: 'list[-1]', example: '{{ tags[-1] }}' },
-          { name: 'list[1:3]', example: '{{ tags[1:3] }}' },
+          { name: 'list[1:3]', example: '{{ tags[1:3] }}', sample: true },
           { name: 'list[:2]', example: '{{ tags[:2] }}' },
           { name: 'list[1:]', example: '{{ tags[1:] }}' },
-          { name: 'nested[0].key', example: '{{ people[0].name }}' },
-          { name: '| length', example: '{{ tags | length }}' },
+          { name: 'nested[0].key', example: '{{ people[0].name }}', sample: true, gap: true },
+          { name: '| length', example: '{{ tags | length }}', sample: true },
           { name: '| count', example: '{{ tags | count }}' },
           { name: '| first', example: '{{ tags | first }}' },
           { name: '| last', example: '{{ tags | last }}' },
@@ -231,29 +218,26 @@ set        : {{ first }}`
           { name: '| max', example: '{{ nums | max }}' },
           { name: '| sum', example: '{{ nums | sum }}' },
           { name: '| sort', example: '{{ nums | sort }}' },
-          { name: '| unique', example: '{{ tags | unique | list }}' },
-          { name: '| reverse', example: '{{ tags | reverse | list }}' },
-          { name: '| join', example: '{{ tags | unique | join(", ") }}' },
-          { name: '| map', example: '{{ people | map(attribute="name") | list }}' },
-          { name: '| batch', example: '{{ tags | unique | batch(2) | list }}' },
-          { name: 'in', example: '{{ "gold" in tags }}' }
+          { name: '| unique', example: '{{ tags | unique | list }}', sample: true, gap: true },
+          { name: '| reverse', example: '{{ tags | reverse | list }}', sample: true },
+          { name: '| join', example: '{{ tags | unique | join(", ") }}', sample: true },
+          { name: '| map', example: '{{ people | map(attribute="name") | list }}', sample: true, gap: true },
+          { name: '| batch', example: '{{ tags | unique | batch(2) | list }}', sample: true },
+          { name: 'in', example: '{{ "gold" in tags }}', sample: true }
         ],
-        template: `[0]     : {{ tags[0] }}
-[-1]    : {{ tags[-1] }}
-slice   : {{ tags[1:3] }}
-nested  : {{ people[0].name }}
-length  : {{ tags | length }}
-first   : {{ tags | first }}
-last    : {{ tags | last }}
-min     : {{ nums | min }}
-max     : {{ nums | max }}
-sum     : {{ nums | sum }}
-sort    : {{ nums | sort }}
-unique  : {{ tags | unique | list }}
-reverse : {{ tags | reverse | list }}
-join    : {{ tags | unique | join(", ") }}
-names   : {{ people | map(attribute="name") | list }}
-in      : {{ "gold" in tags }}`
+        template: `list[0]       : {{ tags[0] }}
+list[1:3]     : {{ tags[1:3] }}
+
+nested[0].key : {{ people[0].name }}
+| length      : {{ tags | length }}
+
+| unique      : {{ tags | unique | list }}
+| reverse     : {{ tags | reverse | list }}
+| join        : {{ tags | unique | join(", ") }}
+
+| map         : {{ people | map(attribute="name") | list }}
+| batch       : {{ tags | unique | batch(2) | list }}
+in            : {{ "gold" in tags }}`
       }
     ]
   },

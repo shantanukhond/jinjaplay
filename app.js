@@ -302,18 +302,40 @@ Standard order.
     return rows;
   }
 
-  function labeledPlayground(rows) {
-    const width = rows.reduce((max, row) => Math.max(max, row.name.length), 0);
+  function lessonPlayground(rows) {
+    const groups = [];
+    const index = new Map();
+    rows.forEach((row) => {
+      const key = row.part || '';
+      if (!index.has(key)) {
+        index.set(key, groups.length);
+        groups.push([]);
+      }
+      groups[index.get(key)].push(row);
+    });
+    return groups.map((partRows) => {
+      const sampled = partRows.filter((row) => row.sample);
+      const shown = sampled.length ? sampled : partRows;
+      return labeledPlayground(shown, partRows);
+    }).filter(Boolean).join('\n');
+  }
+
+  function labeledPlayground(rows, widthRows) {
+    const basis = widthRows && widthRows.length ? widthRows : rows;
+    const width = basis.reduce((max, row) => Math.max(max, row.name.length), 0);
     return rows.map((row) => {
       const example = String(row.example).replace(/\n+$/, '');
       const lines = example.split('\n');
       const isPrint = /^\s*\{\{/.test(lines[0]);
+      let block;
       if (isPrint) {
         const head = `${row.name.padEnd(width)} : ${lines[0]}`;
-        return lines.length > 1 ? [head, ...lines.slice(1)].join('\n') : head;
+        block = lines.length > 1 ? [head, ...lines.slice(1)].join('\n') : head;
+      } else {
+        const safe = String(row.name).replace(/#}/g, '# }');
+        block = `{# ${safe} #}\n${example}`;
       }
-      const safe = String(row.name).replace(/#}/g, '# }');
-      return `{# ${safe} #}\n${example}`;
+      return row.gap ? `\n${block}` : block;
     }).join('\n');
   }
 
@@ -532,7 +554,7 @@ Standard order.
       : (lesson.extraTemplates || {});
     const rows = catalogRowsFor(lesson, currentPartId);
     jsonEditor.setValue(JSON.stringify(playgroundContext(lesson, part, rows), null, 2));
-    templateEditor.setValue(rows.length ? labeledPlayground(rows) : ((part && part.template) || lesson.template));
+    templateEditor.setValue(rows.length ? lessonPlayground(rows) : ((part && part.template) || lesson.template));
     [...exampleTabsEl.children].forEach((btn) => btn.classList.remove('active'));
     highlightLessonNav(lesson.id, currentPartId);
     showLessonBanner(lesson, currentPartId);
