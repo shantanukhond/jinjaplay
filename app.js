@@ -554,7 +554,10 @@ Standard order.
       : (lesson.extraTemplates || {});
     const rows = catalogRowsFor(lesson, currentPartId);
     jsonEditor.setValue(JSON.stringify(playgroundContext(lesson, part, rows), null, 2));
-    templateEditor.setValue(rows.length ? lessonPlayground(rows) : ((part && part.template) || lesson.template));
+    const curated = (part && part.editorTemplate) || (!part && lesson.editorTemplate);
+    templateEditor.setValue(curated != null
+      ? curated
+      : (rows.length ? lessonPlayground(rows) : ((part && part.template) || lesson.template)));
     [...exampleTabsEl.children].forEach((btn) => btn.classList.remove('active'));
     highlightLessonNav(lesson.id, currentPartId);
     showLessonBanner(lesson, currentPartId);

@@ -245,7 +245,7 @@ in            : {{ "gold" in tags }}`
     id: 'conditionals',
     number: 2,
     title: 'Control Structures: Conditionals',
-    summary: 'Branch with if, elif, and else. Comparisons and boolean logic work like Python.',
+    summary: 'Branch with if, elif, and else, or pick a value with an inline if.',
     json: {
       order: {
         id: 'ORD-10432',
@@ -255,21 +255,38 @@ in            : {{ "gold" in tags }}`
         vip_customer: true
       }
     },
-    template: `Order #{{ order.id }}
-Items: {{ order.item_count }}
-Total: {{ order.total | round(2) }} {{ order.currency }}
+    editorTemplate: `{# if elif else Example#}
+UPDATE sales_orders
+{% if order.vip_customer and order.total >= 200 -%}
+SET priority_tier = 'GOLD', discount_pct = 15
+{% elif order.vip_customer or order.total >= 100 -%}
+SET priority_tier = 'SILVER', discount_pct = 5
+{% else -%}
+SET priority_tier = 'BRONZE', discount_pct = 0
+{% endif -%}
+WHERE order_id = '{{ order.id }}';
 
-{% if order.vip_customer %}
-VIP customer — apply 10% loyalty discount.
-{% elif order.total > 200 %}
-Eligible for free shipping.
-{% elif order.item_count == 0 %}
-Empty cart.
-{% else %}
-Standard order.
-{% endif %}
+{#InLine If Else Example#}
+UPDATE delivery_schedules
+SET 
+  handling_fee = {{ 0 if order.total >= 100 else 15.50 }}
+WHERE order_id = '{{ order.id }}';`,
+    template: `{# if elif else Example#}
+UPDATE sales_orders
+{% if order.vip_customer and order.total >= 200 -%}
+SET priority_tier = 'GOLD', discount_pct = 15
+{% elif order.vip_customer or order.total >= 100 -%}
+SET priority_tier = 'SILVER', discount_pct = 5
+{% else -%}
+SET priority_tier = 'BRONZE', discount_pct = 0
+{% endif -%}
+WHERE order_id = '{{ order.id }}';
 
-Kind: {{ "VIP" if order.vip_customer else "standard" }}`,
+{#InLine If Else Example#}
+UPDATE delivery_schedules
+SET 
+  handling_fee = {{ 0 if order.total >= 100 else 15.50 }}
+WHERE order_id = '{{ order.id }}';`,
     subsections: [
       {
         id: 'if-endif',
@@ -305,38 +322,6 @@ Standard
         ],
         template: `{{ "VIP" if order.vip_customer else "standard" }}
 {{ "free ship" if order.total > 200 else "paid ship" }}`
-      },
-      {
-        id: 'comparisons',
-        title: 'Comparisons',
-        catalog: [
-          { name: '==', example: '{{ order.item_count == 4 }}' },
-          { name: '!=', example: '{{ order.currency != "EUR" }}' },
-          { name: '>', example: '{{ order.total > 200 }}' },
-          { name: '<', example: '{{ order.total < 50 }}' },
-          { name: '>=', example: '{{ order.total >= 249.5 }}' },
-          { name: '<=', example: '{{ order.item_count <= 4 }}' }
-        ],
-        template: `{{ order.total > 200 }}
-{{ order.item_count == 0 }}
-{{ order.currency != "EUR" }}`
-      },
-      {
-        id: 'logic-truth',
-        title: 'Logic & truthiness',
-        catalog: [
-          { name: 'and', example: '{% if order.vip_customer and order.total > 100 %}\nVIP + high value\n{% endif %}' },
-          { name: 'or', example: '{% if order.vip_customer or order.item_count == 0 %}\nReview\n{% endif %}' },
-          { name: 'not', example: '{% if not order.vip_customer %}\nStandard\n{% else %}\nVIP\n{% endif %}' }
-        ],
-        template: `{% if order.vip_customer and order.total > 100 %}
-VIP + high value
-{% endif %}
-{% if not order.vip_customer or order.item_count == 0 %}
-Review cart
-{% else %}
-Ready
-{% endif %}`
       }
     ]
   },
@@ -346,26 +331,103 @@ Ready
     title: 'Control Structures: Loops',
     summary: 'Iterate with for. loop.index / loop.last give position. Use namespace to mutate across iterations.',
     json: {
-      services: [
-        { name: 'api-gateway', port: 8080, healthy: true },
-        { name: 'auth-service', port: 8081, healthy: true },
-        { name: 'billing-service', port: 8082, healthy: false }
-      ]
+      order_id: 'ORD-10432',
+      products: [
+        { sku: 'A100', qty: 2, price: 150 },
+        { sku: 'B200', qty: 1, price: 50 },
+        { sku: 'C300', qty: 5, price: 200 }
+      ],
+      user: 'analytics_service',
+      roles: ['data_reader', 'pipeline_executor'],
+      columns: ['order_id', 'customer_tier', 'created_at']
     },
-    template: `{% set ns = namespace(down=0) %}
-Service Health Report
-{% for svc in services %}
-- {{ loop.index }}/{{ loop.length }}. {{ svc.name }} (:{{ svc.port }}) -> {{ "OK" if svc.healthy else "DOWN" }}{{ " [first]" if loop.first else "" }}{{ " [last]" if loop.last else "" }}
-{% if not svc.healthy %}{% set ns.down = ns.down + 1 %}{% endif %}
+    editorTemplate: `SELECT sku, stock_level 
+FROM inventory 
+WHERE sku IN (
+  {#- Iterate through the products array -#}
+  {%- for product in products %}
+    '{{ product.sku }}'{{ "," if not loop.last else "" }}
+  {%- endfor %}
+);
+
+------------------------------------------------
+
+-- Assigning database roles for: {{ user }}
+{% for role in roles %}
+GRANT ROLE {{ role }} TO USER {{ user }};
 {% else %}
-No services in the list.
+GRANT ROLE public_read_only TO USER {{ user }};
 {% endfor %}
 
-Down: {{ ns.down }}   Total: {{ services | length }}`,
+------------------------------------------------
+
+-- Column Mapping Audit
+{% for sku in products -%}
+idx: {{loop.index}} {{loop.first}} {{loop.last}} {{loop.length}} 
+{% endfor -%}
+
+------------------------------------------------
+
+{# Initialize the namespace with a starting value #}
+{%- set ns = namespace(total_value=0) -%}
+
+{# Iterate through the array and update the namespace variable #}
+{%- for product in products %}
+  {%- set ns.total_value = ns.total_value + product.price -%}
+{%- endfor %}
+
+UPDATE order_summary 
+SET calculated_total = {{ ns.total_value }}
+WHERE order_id = '{{ order_id }}';`,
+    template: `SELECT sku, stock_level 
+FROM inventory 
+WHERE sku IN (
+  {#- Iterate through the products array -#}
+  {%- for product in products %}
+    '{{ product.sku }}'{{ "," if not loop.last else "" }}
+  {%- endfor %}
+);
+
+------------------------------------------------
+
+-- Assigning database roles for: {{ user }}
+{% for role in roles %}
+GRANT ROLE {{ role }} TO USER {{ user }};
+{% else %}
+GRANT ROLE public_read_only TO USER {{ user }};
+{% endfor %}
+
+------------------------------------------------
+
+-- Column Mapping Audit
+{% for sku in products -%}
+idx: {{loop.index}} {{loop.first}} {{loop.last}} {{loop.length}} 
+{% endfor -%}
+
+------------------------------------------------
+
+{# Initialize the namespace with a starting value #}
+{%- set ns = namespace(total_value=0) -%}
+
+{# Iterate through the array and update the namespace variable #}
+{%- for product in products %}
+  {%- set ns.total_value = ns.total_value + product.price -%}
+{%- endfor %}
+
+UPDATE order_summary 
+SET calculated_total = {{ ns.total_value }}
+WHERE order_id = '{{ order_id }}';`,
     subsections: [
       {
         id: 'for-endfor',
         title: 'for / endfor',
+        json: {
+          services: [
+            { name: 'api-gateway', port: 8080, healthy: true },
+            { name: 'auth-service', port: 8081, healthy: true },
+            { name: 'billing-service', port: 8082, healthy: false }
+          ]
+        },
         catalog: [
           { name: '{% for %}', example: '{% for svc in services %}\n- {{ svc.name }}\n{% endfor %}' },
           { name: '{% endfor %}', example: '{% for svc in services %}\n- {{ svc.name }}\n{% endfor %}' }
@@ -377,6 +439,13 @@ Down: {{ ns.down }}   Total: {{ services | length }}`,
       {
         id: 'for-else',
         title: 'for else',
+        json: {
+          services: [
+            { name: 'api-gateway', port: 8080, healthy: true },
+            { name: 'auth-service', port: 8081, healthy: true },
+            { name: 'billing-service', port: 8082, healthy: false }
+          ]
+        },
         catalog: [
           { name: '{% else %}', example: '{% for svc in [] %}\n- {{ svc.name }}\n{% else %}\nNo services in the list.\n{% endfor %}' }
         ],
@@ -389,6 +458,13 @@ No services in the list.
       {
         id: 'loop-helpers',
         title: 'loop.* helpers',
+        json: {
+          services: [
+            { name: 'api-gateway', port: 8080, healthy: true },
+            { name: 'auth-service', port: 8081, healthy: true },
+            { name: 'billing-service', port: 8082, healthy: false }
+          ]
+        },
         catalog: [
           { name: 'loop.index', example: '{% for svc in services %}{{ loop.index }}. {{ svc.name }}\n{% endfor %}' },
           { name: 'loop.index0', example: '{% for svc in services %}{{ loop.index0 }}. {{ svc.name }}\n{% endfor %}' },
@@ -403,6 +479,13 @@ No services in the list.
       {
         id: 'namespace',
         title: 'namespace',
+        json: {
+          services: [
+            { name: 'api-gateway', port: 8080, healthy: true },
+            { name: 'auth-service', port: 8081, healthy: true },
+            { name: 'billing-service', port: 8082, healthy: false }
+          ]
+        },
         catalog: [
           { name: 'namespace()', example: '{% set ns = namespace(down=0) %}\n{% for svc in services %}\n{% if not svc.healthy %}{% set ns.down = ns.down + 1 %}{% endif %}\n{% endfor %}\nDown: {{ ns.down }}' }
         ],
